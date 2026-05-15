@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KOSPI · Maximum Drawdown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,600;9..144,800&family=JetBrains+Mono:wght@400;500;700&family=IBM+Plex+Sans+KR:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #0d0d0c; --bg-2: #161614; --ink: #f4efe6; --ink-dim: #a8a196;
+    --ink-mute: #6b6557; --line: #28251f; --line-strong: #3d3930;
+    --accent: #ff5b1f; --accent-soft: #ffb38a; --green: #7fbf6a;
+    --red: #ff5b1f; --grid: rgba(244, 239, 230, 0.06);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'IBM Plex Sans KR', sans-serif; background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(255, 91, 31, 0.08), transparent 60%), var(--bg);
+    color: var(--ink); line-height: 1.5; min-height: 100vh; padding: 48px 32px;
+  }
+  .wrap { max-width: 1200px; margin: 0 auto; }
+  header { display: flex; justify-content: space-between; border-bottom: 1px solid var(--line); padding-bottom: 24px; margin-bottom: 48px; }
+  .brand { font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.15em; color: var(--ink-dim); }
+  .hero { margin-bottom: 64px; }
+  .hero h1 { font-family: 'Fraunces', serif; font-size: clamp(40px, 6vw, 80px); font-weight: 300; letter-spacing: -0.02em; }
+  .hero h1 em { font-style: italic; color: var(--accent); }
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-bottom: 48px; }
+  .stat { padding: 32px 24px; border-right: 1px solid var(--line); }
+  .stat:last-child { border-right: none; }
+  .stat-label { font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--ink-mute); margin-bottom: 12px; text-transform: uppercase; }
+  .stat-value { font-family: 'Fraunces', serif; font-size: 36px; font-weight: 400; }
+  .chart-card { background: var(--bg-2); border: 1px solid var(--line); padding: 32px; border-radius: 4px; position: relative; }
+  #chart { width: 100%; height: 400px; display: block; }
+  .status { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--ink-dim); text-align: center; margin-top: 20px; }
+  .legend-box { margin-top: 60px; padding-top: 30px; border-top: 1px solid var(--line); }
+  .legend-table { width: 100%; border-collapse: collapse; font-size: 13px; color: var(--ink-dim); }
+  .legend-table td { padding: 8px 0; border-bottom: 1px dashed var(--line); }
+  .red { color: var(--red); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">KOSPI COMPOSITE INDEX ANALYSIS</div>
+    <div id="updated" style="font-family:'JetBrains Mono'; font-size:11px; color:var(--accent);">CONNECTING...</div>
+  </header>
+
+  <section class="hero">
+    <h1>KOSPI <em>MDD</em> <span id="dropPct">—</span></h1>
+    <p style="margin-top:20px; color:var(--ink-dim);">
+      <span id="leadEmoji" style="font-size: 24px;"></span> 
+      <span id="leadNarrative" style="font-size: 16px; margin-left:10px;">데이터를 분석하고 있습니다...</span>
+    </p>
+  </section>
+
+  <section class="stats">
+    <div class="stat">
+      <div class="stat-label">CURRENT INDEX</div>
+      <div id="curPrice" class="stat-value">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">52W HIGH (장중포함)</div>
+      <div id="hiPrice" class="stat-value">—</div>
+    </div>
+    <div class="stat">
+      <div class="stat-label">DRAWDOWN (낙폭)</div>
+      <div id="ddPct" class="stat-value red">—</div>
+    </div>
+  </section>
+
+  <div class="chart-card">
+    <svg id="chart"></svg>
+    <div id="status" class="status">Initializing...</div>
+  </div>
+
+  <section class="legend-box">
+    <table class="legend-table">
+      <tr><td>🟢 MDD < 1%</td><td>신고가 장세입니다! 돌파 매매에 집중하세요.</td></tr>
+      <tr><td>🟩 1% ~ 5%</td><td>무난한 변동성입니다.</td></tr>
+      <tr><td>🏇 5% ~ 10%</td><td>여기서 마무리 되는 조정도 많습니다. 무난하게 홀딩해보시죠. 당신은 최고입니다.</td></tr>
+      <tr><td>🏴‍☠️ 10% ~ 18%</td><td>의미있는 조정이 진행중입니다. 25%의 신용거래를 진행합니다.</td></tr>
+      <tr><td>❤️ 18% ~ 25%</td><td>경기침체가 없다면 통계적으로 높은 확률의 바닥입니다. 용기를 내세요. 100%의 신용거래를 진행합니다.</td></tr>
+      <tr><td>🕊️ 25% ~ 40%</td><td>희망을 잃지 마십시오.</td></tr>
+      <tr><td>✝️ 40% 이상</td><td>금융 붕괴가 아니라면 무조건 벌 수 있습니다.</td></tr>
+    </table>
+  </section>
+</div>
+
+<script>
+async function loadData() {
+  const status = document.getElementById('status');
+  // Yahoo Finance API URL (오늘 포함 1년치 데이터)
+  const target = encodeURIComponent('https://query1.finance.yahoo.com/v8/finance/chart/%5EKS11?range=1y&interval=1d');
+  
+  // 프록시 서버 리스트 (하나가 안되면 다음으로 넘어감)
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${target}`,
+    `https://corsproxy.io/?${decodeURIComponent(target)}`
+  ];
+
+  for (let url of proxies) {
+    try {
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const json = await res.json();
+      const result = json.chart.result[0];
+      
+      const quotes = result.indicators.quote[0];
+      const closeArr = quotes.close.filter(v => v !== null);
+      const highArr = quotes.high.filter(v => v !== null);
+
+      const cur = closeArr[closeArr.length - 1];
+      const hi = Math.max(...highArr); // 오늘 장중 고가 포함 52주 최고가
+      const mdd = ((cur - hi) / hi) * 100;
+      const absMdd = Math.abs(mdd);
+
+      // 통계 업데이트
+      document.getElementById('curPrice').textContent = cur.toLocaleString(undefined, {minimumFractionDigits:2});
+      document.getElementById('hiPrice').textContent = hi.toLocaleString(undefined, {minimumFractionDigits:2});
+      document.getElementById('dropPct').textContent = absMdd.toFixed(2) + '%';
+      document.getElementById('ddPct').textContent = absMdd.toFixed(2) + '%';
+      document.getElementById('updated').textContent = 'LIVE UPDATED: ' + new Date().toLocaleTimeString();
+
+      // 원본 투자 시그널 로직 적용
+      let emoji, text;
+      if (absMdd < 1) { emoji = '🟢'; text = '신고가 장세입니다! 돌파 매매에 집중하세요.'; }
+      else if (absMdd < 5) { emoji = '🟩'; text = '무난한 변동성입니다.'; }
+      else if (absMdd < 10) { emoji = '🏇'; text = '여기서 마무리 되는 조정도 많습니다. 무난하게 홀딩해보시죠. 당신은 최고입니다.'; }
+      else if (absMdd < 18) { emoji = '🏴‍☠️'; text = '의미있는 조정이 진행중입니다. 25%의 신용거래를 진행합니다.'; }
+      else if (absMdd < 25) { emoji = '❤️'; text = '경기침체가 없다면 통계적으로 높은 확률의 바닥입니다. 용기를 내세요. 100%의 신용거래를 진행합니다.'; }
+      else if (absMdd < 40) { emoji = '🕊️'; text = '희망을 잃지 마십시오.'; }
+      else { emoji = '✝️'; text = '금융 붕괴가 아니라면 무조건 벌 수 있습니다.'; }
+
+      document.getElementById('leadEmoji').textContent = emoji;
+      document.getElementById('leadNarrative').textContent = text;
+
+      renderChart(closeArr, hi);
+      status.textContent = '✓ 분석 완료';
+      return; // 성공 시 루프 종료
+    } catch (e) {
+      console.error("Proxy error:", e);
+    }
+  }
+  status.textContent = '✗ 데이터를 가져오는 데 실패했습니다. 다시 시도해 주세요.';
+}
+
+function renderChart(data, hi) {
+  const svg = document.getElementById('chart');
+  svg.innerHTML = ''; // 초기화
+  const w = svg.clientWidth || 1000, h = 400;
+  const min = Math.min(...data) * 0.98, max = hi * 1.02;
+  
+  const x = (i) => (i / (data.length - 1)) * w;
+  const y = (v) => h - ((v - min) / (max - min)) * h;
+
+  // 차트 경로 생성
+  let d = `M ${x(0)} ${y(data[0])}`;
+  for(let i=1; i<data.length; i++) d += ` L ${x(i)} ${y(data[i])}`;
+  
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  path.setAttribute('d', d);
+  path.setAttribute('fill', 'none');
+  path.setAttribute('stroke', '#f4efe6');
+  path.setAttribute('stroke-width', '1.5');
+  
+  // 최고가 점선
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line.setAttribute('x1', '0'); line.setAttribute('y1', y(hi));
+  line.setAttribute('x2', w); line.setAttribute('y2', y(hi));
+  line.setAttribute('stroke', '#ff5b1f'); line.setAttribute('stroke-dasharray', '4');
+  
+  svg.appendChild(line);
+  svg.appendChild(path);
+}
+
+loadData();
+window.onresize = () => loadData();
+</script>
+</body>
+</html>
